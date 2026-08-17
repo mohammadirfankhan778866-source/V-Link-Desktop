@@ -8,7 +8,7 @@
 #define MyAppExeName "V-Link.exe"
 
 [Setup]
-; NOTE: The value of AppId uniquely identifies this application.
+; Unique application GUID
 AppId={{9F8214BC-2C1E-4780-99E8-54AC717B8092}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
@@ -21,7 +21,6 @@ DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
 OutputDir=.\Output
 OutputBaseFilename=V-Link-Setup-{#MyAppVersion}
-SetupIconFile=..\app\src\main\res\drawable\pulse_chat_icon.png
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
@@ -33,18 +32,17 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked; OnlyBelowVersion: 6.1; Check: not IsAdminInstallMode
 
 [Files]
-; Distributable app files (Package directory from Compose Desktop or Java runtime)
+; Distributable app files
 Source: "..\dist\V-Link\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-; Fallback standalone executable if compiled via single bundle
+; Fallback standalone executable if present
 Source: "..\dist\V-Link.exe"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 
 [Icons]
-Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\{#MyAppExeName}"
+Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Flags: createonlyiffileexists
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon; IconFilename: "{app}\{#MyAppExeName}"
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon; Flags: createonlyiffileexists
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent skipifnotsilent

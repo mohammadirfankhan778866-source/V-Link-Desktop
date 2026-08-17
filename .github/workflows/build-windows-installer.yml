@@ -16,25 +16,71 @@ jobs:
       - name: Setup Java JDK
         uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
+          distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Inno Setup
+      - name: Install Inno Setup
+        shell: pwsh
         run: |
-          choco install innosetup --yes
+          choco install innosetup --yes --no-progress
+          if (Test-Path "C:\Program Files (x86)\Inno Setup 6\ISCC.exe") {
+            echo "Inno Setup 6 found at (x86)"
+            echo "C:\Program Files (x86)\Inno Setup 6" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          } elseif (Test-Path "C:\Program Files\Inno Setup 6\ISCC.exe") {
+            echo "Inno Setup 6 found at 64-bit"
+            echo "C:\Program Files\Inno Setup 6" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          }
 
-      - name: Create Distribution Staging Folder
+      - name: Prepare Staging Distribution Directory
+        shell: pwsh
         run: |
-          mkdir dist
-          mkdir dist\V-Link
-          echo "V-Link Application Assets" > dist\V-Link\app_info.txt
+          New-Item -ItemType Directory -Force -Path "dist\V-Link"
+          New-Item -ItemType Directory -Force -Path "windows\Output"
+          
+          # Create placeholder app files and metadata
+          @"
+          V-Link Desktop Client
+          Version: 1.0.0
+          Build: Production x64
+          Architecture: Windows 10/11 x64
+          Package Date: $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+          "@ | Out-File -FilePath "dist\V-Link\app_info.txt" -Encoding utf8
+          
+          # Copy app resources to staging
+          if (Test-Path "app\src\main\res") {
+            Copy-Item -Path "app\src\main\res" -Destination "dist\V-Link\res" -Recurse -Force
+          }
 
-      - name: Compile Inno Setup Script
+      - name: Compile Inno Setup Installer Script
+        shell: pwsh
         run: |
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" windows\vlink_setup.iss
+          $iscc = Get-Command ISCC.exe -ErrorAction SilentlyContinue
+          if ($null -eq $iscc) {
+            if (Test-Path "C:\Program Files (x86)\Inno Setup 6\ISCC.exe") {
+              $isccPath = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+            } elseif (Test-Path "C:\Program Files\Inno Setup 6\ISCC.exe") {
+              $isccPath = "C:\Program Files\Inno Setup 6\ISCC.exe"
+            } else {
+              throw "ISCC.exe compiler not found in system paths."
+            }
+          } else {
+            $isccPath = $iscc.Source
+          }
+          
+          Write-Host "Compiling using: $isccPath"
+          & $isccPath windows\vlink_setup.iss
+
+      - name: Verify Output Installer Exists
+        shell: pwsh
+        run: |
+          Get-ChildItem -Path "windows\Output" -Recurse
+          if (-not (Test-Path "windows\Output\V-Link-Setup-1.0.0.exe")) {
+            throw "Installer executable windows/Output/V-Link-Setup-1.0.0.exe was not created!"
+          }
 
       - name: Upload Windows Setup .exe Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: V-Link-Setup-Windows-Installer
+          name: V-Link-Setup-1.0.0
           path: windows/Output/V-Link-Setup-1.0.0.exe
+          if-no-files-found: error
