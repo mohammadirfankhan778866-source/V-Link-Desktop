@@ -1,0 +1,8 @@
+{
+  "name": "V-Link",
+  "description": "V-Link Native Desktop Messenger - A modern, encrypted desktop messaging application featuring dual-pane conversations, Erlang WebSocket clustering, rich media, and Windows desktop installer packaging.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

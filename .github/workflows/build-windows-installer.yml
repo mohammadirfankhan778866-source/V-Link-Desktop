@@ -1,0 +1,40 @@
+name: Build Windows Desktop Installer (.exe)
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build-windows-installer:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Inno Setup
+        run: |
+          choco install innosetup --yes
+
+      - name: Create Distribution Staging Folder
+        run: |
+          mkdir dist
+          mkdir dist\V-Link
+          echo "V-Link Application Assets" > dist\V-Link\app_info.txt
+
+      - name: Compile Inno Setup Script
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" windows\vlink_setup.iss
+
+      - name: Upload Windows Setup .exe Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: V-Link-Setup-Windows-Installer
+          path: windows/Output/V-Link-Setup-1.0.0.exe
