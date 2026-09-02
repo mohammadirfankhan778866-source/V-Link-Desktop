@@ -84,7 +84,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _isCheckingForUpdates.value = true
             try {
-                val result = app.updateService.checkForUpdates(currentAppVersion)
+                val result = app.versionManager.checkForUpdates(isManual = isUserInitiated)
                 if (result.isSuccess) {
                     val info = result.getOrNull()
                     _appUpdateInfo.value = info

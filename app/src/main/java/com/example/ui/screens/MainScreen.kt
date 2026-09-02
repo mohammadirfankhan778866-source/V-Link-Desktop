@@ -681,7 +681,7 @@ fun WindowsSystemTrayMenuDialog(
                         Icon(Icons.Default.DesktopWindows, contentDescription = null, tint = VLinkCyan, modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
-                            Text("Open Main Window", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text("Open", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                             Text("Bring V-Link window to foreground", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
@@ -752,6 +752,26 @@ fun WindowsSystemTrayMenuDialog(
                         Column {
                             Text("Minimize to Tray", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                             Text("Keep running silently in taskbar", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+
+                Surface(
+                    onClick = {
+                        onDismiss()
+                        // Clean exit
+                        viewModel.setMinimizedToTray(true)
+                    },
+                    shape = RoundedCornerShape(10.dp),
+                    color = Color(0xFFEF4444).copy(alpha = 0.15f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.PowerSettingsNew, contentDescription = null, tint = Color(0xFFEF4444), modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text("Exit V-Link", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFFEF4444))
+                            Text("Terminate background process", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }

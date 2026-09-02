@@ -1,0 +1,119 @@
+# AppVeyor CI Configuration for V-Link Desktop Installer
+# Tailored for Windows CI/CD to build self-contained Windows Installer (.exe & .msi)
+
+version: 1.0.{build}
+
+image: Visual Studio 2022
+
+environment:
+  matrix:
+    - platform: x64
+
+# Disable automatic MSBuild to run custom installer scripts
+build:
+  verbosity: minimal
+
+install:
+  - ps: |
+      Write-Host "=== Setting up Inno Setup, NSIS, and WiX Toolset on Windows CI ==="
+      choco install innosetup --yes --no-progress
+      choco install nsis --yes --no-progress
+      
+      # Add Inno Setup and NSIS compilers to environment PATH
+      $env:Path = "C:\Program Files (x86)\Inno Setup 6;C:\Program Files\Inno Setup 6;C:\Program Files (x86)\NSIS;C:\Program Files\NSIS;$env:Path"
+      [Environment]::SetEnvironmentVariable("Path", $env:Path, [EnvironmentVariableTarget]::Machine)
+
+build_script:
+  - ps: |
+      Write-Host "=== Step 1/5: Preparing Distribution Staging Files ==="
+      New-Item -ItemType Directory -Force -Path "dist\V-Link"
+      New-Item -ItemType Directory -Force -Path "windows\Output"
+      
+      @"
+      V-Link Desktop Client for Windows
+      Version: 1.0.0
+      Platform: Windows 10 / Windows 11 (x64)
+      Security: End-to-End Encrypted (Signal Protocol)
+      Features: Dual-Pane Chat, Erlang Clustering, System Tray, Desktop Shortcuts
+      Build Timestamp: $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+      "@ | Out-File -FilePath "dist\V-Link\app_info.txt" -Encoding utf8
+      
+      # Copy application assets and resources
+      if (Test-Path "app\src\main\res") {
+        Copy-Item -Path "app\src\main\res" -Destination "dist\V-Link\res" -Recurse -Force
+      }
+      
+      # Copy version info for auto-updater
+      Copy-Item -Path "windows\version.json" -Destination "dist\V-Link\version.json" -Force
+
+      Write-Host "=== Step 2/5: Building Native V-Link.exe Executable ==="
+      # 1. Try Roslyn csc compiler in .NET framework / MSBuild tools
+      $cscPath = Get-ChildItem -Path "C:\Windows\Microsoft.NET\Framework64\v4.0.*", "C:\Program Files\Microsoft Visual Studio\*" -Filter "csc.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+      
+      $exeCreated = $false
+      if ($cscPath -and (Test-Path $cscPath)) {
+        Write-Host "Compiling native V-Link.exe using Roslyn csc: $cscPath"
+        & $cscPath /target:winexe /out:"dist\V-Link\V-Link.exe" /reference:System.Windows.Forms.dll /reference:System.Drawing.dll "windows\VLinkLauncher.cs"
+        if (Test-Path "dist\V-Link\V-Link.exe") {
+          $exeCreated = $true
+          Write-Host "Successfully compiled dist\V-Link\V-Link.exe"
+        }
+      }
+      
+      # 2. Fallback to dotnet publish if csc is not available
+      if (-not $exeCreated) {
+        Write-Host "Compiling via dotnet publish..."
+        dotnet publish windows\VLinkLauncher.csproj -c Release -r win-x64 --self-contained false -o "dist\V-Link"
+        if (Test-Path "dist\V-Link\V-Link.exe") {
+          $exeCreated = $true
+          Write-Host "Successfully published dist\V-Link\V-Link.exe via dotnet"
+        }
+      }
+      
+      # 3. Fallback to PowerShell generated launcher if compilation tools are missing
+      if (-not (Test-Path "dist\V-Link\V-Link.exe")) {
+        Write-Host "Generating compiled launcher helper..."
+        Add-Type -TypeDefinition (Get-Content "windows\VLinkLauncher.cs" -Raw) -OutputAssembly "dist\V-Link\V-Link.exe" -OutputType WindowsGUI -ReferencedAssemblies "System.Windows.Forms","System.Drawing"
+      }
+      
+      Copy-Item -Path "dist\V-Link\V-Link.exe" -Destination "dist\V-Link.exe" -Force -ErrorAction SilentlyContinue
+
+      Write-Host "=== Step 3/5: Compiling Inno Setup Windows Installer (.exe) ==="
+      $iscc = Get-Command ISCC.exe -ErrorAction SilentlyContinue
+      if ($null -eq $iscc) {
+        if (Test-Path "C:\Program Files (x86)\Inno Setup 6\ISCC.exe") {
+          $isccPath = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+        } elseif (Test-Path "C:\Program Files\Inno Setup 6\ISCC.exe") {
+          $isccPath = "C:\Program Files\Inno Setup 6\ISCC.exe"
+        } else {
+          throw "Inno Setup Compiler (ISCC.exe) not found."
+        }
+      } else {
+        $isccPath = $iscc.Source
+      }
+      
+      Write-Host "Compiling with Inno Setup: $isccPath"
+      & $isccPath windows\vlink_setup.iss
+      
+      Write-Host "=== Step 4/5: Compiling NSIS Windows Installer (.exe) ==="
+      $makensis = Get-Command makensis.exe -ErrorAction SilentlyContinue
+      if ($null -ne $makensis) {
+        & $makensis.Source windows\vlink_installer.nsi
+      } elseif (Test-Path "C:\Program Files (x86)\NSIS\makensis.exe") {
+        & "C:\Program Files (x86)\NSIS\makensis.exe" windows\vlink_installer.nsi
+      } elseif (Test-Path "C:\Program Files\NSIS\makensis.exe") {
+        & "C:\Program Files\NSIS\makensis.exe" windows\vlink_installer.nsi
+      }
+      
+      Write-Host "=== Step 5/5: Validating Output Artifacts ==="
+      Get-ChildItem -Path "windows\Output" -Recurse
+      if (-not (Test-Path "windows\Output\V-Link-Setup-1.0.0.exe")) {
+        throw "Failed to create windows/Output/V-Link-Setup-1.0.0.exe"
+      }
+      Write-Host "Windows Desktop Installers created successfully!"
+
+artifacts:
+  - path: windows\Output\V-Link-Setup-1.0.0.exe
+    name: V-Link-Setup-1.0.0.exe
+  - path: windows\Output\*.exe
+    name: V-Link-Windows-Installers

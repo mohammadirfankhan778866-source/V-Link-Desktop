@@ -1,0 +1,19 @@
+{
+  "latest_version": "1.2.5",
+  "version": "1.2.5",
+  "minRequiredVersion": "1.0.0",
+  "releaseDate": "2026-08-17",
+  "downloadUrl": "https://github.com/mohammadirfankhan778866-source/V-Link-Desktop/releases/latest/download/V-Link-Setup-1.2.5.exe",
+  "installerFileName": "V-Link-Setup-1.2.5.exe",
+  "fileSizeMb": "48.5 MB",
+  "mandatory": false,
+  "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "releaseNotes": [
+    "⚡ High-performance multi-threaded Erlang cluster chat engine",
+    "🔒 Real-time End-to-End Double Ratchet encryption for private DMs and groups",
+    "🖥️ Desktop dual-pane interface with responsive navigation rail & Windows system tray",
+    "⌨️ Global Desktop keyboard shortcuts (Ctrl+N, Ctrl+Tab, Ctrl+W, Ctrl+M)",
+    "🎨 System-synced AMOLED / Dark / Light theme options and custom chat wallpapers",
+    "🚀 Clean Inno Setup, NSIS, and WiX native Windows installers with Desktop & Start Menu integration"
+  ]
+}

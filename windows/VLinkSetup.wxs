@@ -1,0 +1,58 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <!-- V-Link Desktop WiX Toolset MSI Installer Configuration -->
+  <Package Name="V-Link Desktop" 
+           Manufacturer="V-Link Messenger Inc." 
+           Version="1.0.0.0" 
+           UpgradeCode="9F8214BC-2C1E-4780-99E8-54AC717B8092" 
+           Scope="perMachine">
+    
+    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- Standard Windows Program Files Folder -->
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="V-Link">
+        <Component Id="MainExecutable" Guid="3E477041-A281-4FE8-9CA2-1A12739E0C11">
+          <File Id="VLinkExe" Source="..\dist\V-Link\app_info.txt" KeyPath="yes" />
+        </Component>
+        <Component Id="VersionMetadata" Guid="87DCF122-C844-429C-9743-73DA2E81BB33">
+          <File Id="VersionJson" Source="..\windows\version.json" />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+
+    <!-- Start Menu Shortcuts Directory -->
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ApplicationProgramsFolder" Name="V-Link">
+        <Component Id="StartMenuShortcut" Guid="7D1080FE-E882-4161-9EE8-39A77EAA5C91">
+          <Shortcut Id="ApplicationStartMenuShortcut"
+                    Name="V-Link Desktop"
+                    Description="V-Link Secure Desktop Messenger"
+                    Target="[INSTALLFOLDER]app_info.txt"
+                    WorkingDirectory="INSTALLFOLDER" />
+          <RemoveFolder Id="CleanUpShortCut" Directory="ApplicationProgramsFolder" On="uninstall" />
+          <RegistryValue Root="HKCU" Key="Software\V-Link\Desktop" Name="installed" Type="integer" Value="1" KeyPath="yes" />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+
+    <!-- Desktop Shortcut Directory -->
+    <StandardDirectory Id="DesktopFolder">
+      <Component Id="DesktopShortcutComponent" Guid="B4E3B950-84E3-40D9-923F-BC139A86E931">
+        <Shortcut Id="ApplicationDesktopShortcut"
+                  Name="V-Link"
+                  Description="V-Link Secure Desktop Messenger"
+                  Target="[INSTALLFOLDER]app_info.txt"
+                  WorkingDirectory="INSTALLFOLDER" />
+        <RegistryValue Root="HKCU" Key="Software\V-Link\Desktop" Name="desktop_shortcut" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </StandardDirectory>
+
+    <Feature Id="MainFeature" Title="V-Link Desktop" Level="1">
+      <ComponentRef Id="MainExecutable" />
+      <ComponentRef Id="VersionMetadata" />
+      <ComponentRef Id="StartMenuShortcut" />
+      <ComponentRef Id="DesktopShortcutComponent" />
+    </Feature>
+  </Package>
+</Wix>

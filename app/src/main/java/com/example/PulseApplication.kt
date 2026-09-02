@@ -44,6 +44,9 @@ class PulseApplication : Application() {
     lateinit var updateService: com.example.data.network.UpdateService
         private set
 
+    lateinit var versionManager: com.example.data.network.VersionManager
+        private set
+
     override fun onCreate() {
         super.onCreate()
         try {
@@ -61,6 +64,7 @@ class PulseApplication : Application() {
         authRepository = com.example.data.repository.AuthRepository(this)
         chatDraftDataStore = com.example.data.datastore.ChatDraftDataStore(this)
         updateService = com.example.data.network.UpdateService(this)
+        versionManager = com.example.data.network.VersionManager(this, applicationScope)
 
         createNotificationChannels()
         setupSyncWorker()

@@ -1,31 +1,51 @@
-# V-Link Windows Desktop Client & Installer
+# V-Link Windows Desktop Client & Multi-Installer Suite
 
-This directory contains the Inno Setup script, build scripts, and resources to package V-Link into a standalone Windows installer (`.exe`).
-
----
-
-## 🚀 How to Build the Installer
-
-### Option 1: Automatic Cloud Build (GitHub Actions)
-1. Push your repository to GitHub (e.g. `V-Link-Desktop`).
-2. Go to the **Actions** tab on your GitHub repository.
-3. Select **"Build Windows Desktop Installer (.exe)"** and click **Run workflow**.
-4. When finished, download the **`V-Link-Setup-1.0.0.exe`** from the **Artifacts** section at the bottom of the run page.
+This directory contains the complete Windows installer packaging configuration for V-Link, supporting Inno Setup, NSIS, WiX Toolset (.msi), and automated PowerShell deployment.
 
 ---
 
-### Option 2: Local Build on Windows PC
-1. Download and install [Inno Setup 6 (Free)](https://jrsoftware.org/isdl.php).
-2. Right-click `build_installer.bat` and select **Run as administrator** (or double-click it).
-3. The generated installer will be saved to:
-   ```
-   windows\Output\V-Link-Setup-1.0.0.exe
-   ```
+## 📦 Available Windows Installer Options:
+
+| Installer Type | Source Script | Description |
+| :--- | :--- | :--- |
+| **Inno Setup 6 (.exe)** | `windows/vlink_setup.iss` | Modern graphical wizard, desktop & Start Menu shortcuts, solid LZMA2 compression. |
+| **NSIS 3 (.exe)** | `windows/vlink_installer.nsi` | Lightweight Nullsoft installer with administrative privilege elevation. |
+| **WiX Toolset v4 (.msi)** | `windows/VLinkSetup.wxs` | Enterprise-grade Windows Installer package (`.msi`) for Group Policy / Intune. |
+| **PowerShell Script (.ps1)** | `windows/install_vlink.ps1` | Silent unattended deployment, update check, and registry registration. |
 
 ---
 
-## 📦 What the Installer Does:
-- Installs all application components to `C:\Program Files\V-Link`.
-- Creates **Desktop Home Screen shortcut** (`V-Link`).
-- Adds entry into Windows **Start Menu**.
-- Includes complete Windows Uninstaller support (`unins000.exe`).
+## 🚀 How to Build via Cloud (CI/CD)
+
+### 1. AppVeyor CI (`appveyor.yml`)
+- Connect your GitHub repository to [AppVeyor](https://www.appveyor.com/).
+- AppVeyor runs on Windows Server 2022 image, installs Inno Setup & NSIS, and outputs `.exe` installer artifacts in your **Artifacts** tab.
+
+### 2. GitHub Actions (`.github/workflows/build-windows-installer.yml`)
+- Push your repo to GitHub ➔ Go to **Actions** tab ➔ Download the generated **`V-Link-Setup-1.0.0.exe`**.
+
+---
+
+## 🛠️ Local PowerShell Automation Commands:
+
+Run these in Windows PowerShell:
+
+```powershell
+# 1. Standard Interactive Install
+.\windows\install_vlink.ps1
+
+# 2. Silent Unattended Install (for IT scripts)
+.\windows\install_vlink.ps1 -Silent
+
+# 3. Check for Remote Updates against version.json
+.\windows\install_vlink.ps1 -CheckUpdate
+
+# 4. Clean Uninstall
+.\windows\install_vlink.ps1 -Uninstall
+```
+
+---
+
+## 🔄 Version Check System:
+- **Local version tracking file**: `windows/version.json`
+- **Remote check endpoint**: `UpdateService.kt` compares semantic versions (`1.0.0` vs remote `1.2.5`) to prompt the user with release notes and 1-click update download buttons in Settings.
