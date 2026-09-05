@@ -28,8 +28,6 @@ SetCompressor /SOLID lzma
 
 ; UI Configuration
 !define MUI_ABORTWARNING
-!define MUI_ICON "..\app\src\main\res\drawable\pulse_chat_icon.png"
-!define MUI_UNICON "..\app\src\main\res\drawable\pulse_chat_icon.png"
 
 ; Pages
 !insertmacro MUI_PAGE_WELCOME
@@ -59,11 +57,11 @@ Section "MainSection" SEC01
 
   ; Create Start Menu Shortcuts
   CreateDirectory "$SMPROGRAMS\V-Link"
-  CreateShortCut "$SMPROGRAMS\V-Link\V-Link.lnk" "$INSTDIR\V-Link.exe" "" "$INSTDIR\res\drawable\pulse_chat_icon.png" 0
-  CreateShortCut "$SMPROGRAMS\V-Link\Uninstall.lnk" "$INSTDIR\uninst.exe" "" "$INSTDIR\uninst.exe" 0
+  CreateShortCut "$SMPROGRAMS\V-Link\V-Link.lnk" "$INSTDIR\V-Link.exe"
+  CreateShortCut "$SMPROGRAMS\V-Link\Uninstall.lnk" "$INSTDIR\uninst.exe"
 
   ; Create Desktop Shortcut
-  CreateShortCut "$DESKTOP\V-Link.lnk" "$INSTDIR\V-Link.exe" "" "$INSTDIR\res\drawable\pulse_chat_icon.png" 0
+  CreateShortCut "$DESKTOP\V-Link.lnk" "$INSTDIR\V-Link.exe"
 SectionEnd
 
 Section -Post

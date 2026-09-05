@@ -15,7 +15,7 @@ build:
 
 install:
   - ps: |
-      Write-Host "=== Setting up Inno Setup, NSIS, and WiX Toolset on Windows CI ==="
+      Write-Host "=== Setting up Inno Setup and NSIS on Windows CI ==="
       choco install innosetup --yes --no-progress
       choco install nsis --yes --no-progress
       
@@ -38,45 +38,36 @@ build_script:
       Build Timestamp: $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")
       "@ | Out-File -FilePath "dist\V-Link\app_info.txt" -Encoding utf8
       
-      # Copy application assets and resources
       if (Test-Path "app\src\main\res") {
         Copy-Item -Path "app\src\main\res" -Destination "dist\V-Link\res" -Recurse -Force
       }
       
-      # Copy version info for auto-updater
       Copy-Item -Path "windows\version.json" -Destination "dist\V-Link\version.json" -Force
 
       Write-Host "=== Step 2/5: Building Native V-Link.exe Executable ==="
-      # 1. Try Roslyn csc compiler in .NET framework / MSBuild tools
-      $cscPath = Get-ChildItem -Path "C:\Windows\Microsoft.NET\Framework64\v4.0.*", "C:\Program Files\Microsoft Visual Studio\*" -Filter "csc.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+      $outExe = "dist\V-Link\V-Link.exe"
       
-      $exeCreated = $false
-      if ($cscPath -and (Test-Path $cscPath)) {
-        Write-Host "Compiling native V-Link.exe using Roslyn csc: $cscPath"
-        & $cscPath /target:winexe /out:"dist\V-Link\V-Link.exe" /reference:System.Windows.Forms.dll /reference:System.Drawing.dll "windows\VLinkLauncher.cs"
-        if (Test-Path "dist\V-Link\V-Link.exe") {
-          $exeCreated = $true
-          Write-Host "Successfully compiled dist\V-Link\V-Link.exe"
-        }
-      }
-      
-      # 2. Fallback to dotnet publish if csc is not available
-      if (-not $exeCreated) {
+      try {
         Write-Host "Compiling via dotnet publish..."
         dotnet publish windows\VLinkLauncher.csproj -c Release -r win-x64 --self-contained false -o "dist\V-Link"
-        if (Test-Path "dist\V-Link\V-Link.exe") {
-          $exeCreated = $true
-          Write-Host "Successfully published dist\V-Link\V-Link.exe via dotnet"
+      } catch {
+        Write-Host "dotnet publish note: $($_.Exception.Message)"
+      }
+      
+      if (-not (Test-Path $outExe)) {
+        $cscPath = Get-ChildItem -Path "C:\Windows\Microsoft.NET\Framework64\v4.0.*", "C:\Program Files\Microsoft Visual Studio\*" -Filter "csc.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+        if ($cscPath -and (Test-Path $cscPath)) {
+          Write-Host "Compiling native V-Link.exe using Roslyn csc: $cscPath"
+          & $cscPath /target:winexe /out:$outExe /reference:System.Windows.Forms.dll /reference:System.Drawing.dll "windows\VLinkLauncher.cs"
         }
       }
       
-      # 3. Fallback to PowerShell generated launcher if compilation tools are missing
-      if (-not (Test-Path "dist\V-Link\V-Link.exe")) {
-        Write-Host "Generating compiled launcher helper..."
-        Add-Type -TypeDefinition (Get-Content "windows\VLinkLauncher.cs" -Raw) -OutputAssembly "dist\V-Link\V-Link.exe" -OutputType WindowsGUI -ReferencedAssemblies "System.Windows.Forms","System.Drawing"
+      if (-not (Test-Path $outExe)) {
+        Write-Host "Generating compiled launcher via Add-Type..."
+        Add-Type -TypeDefinition (Get-Content "windows\VLinkLauncher.cs" -Raw) -OutputAssembly $outExe -OutputType WindowsGUI -ReferencedAssemblies "System.Windows.Forms","System.Drawing"
       }
       
-      Copy-Item -Path "dist\V-Link\V-Link.exe" -Destination "dist\V-Link.exe" -Force -ErrorAction SilentlyContinue
+      Copy-Item -Path $outExe -Destination "dist\V-Link.exe" -Force -ErrorAction SilentlyContinue
 
       Write-Host "=== Step 3/5: Compiling Inno Setup Windows Installer (.exe) ==="
       $iscc = Get-Command ISCC.exe -ErrorAction SilentlyContinue

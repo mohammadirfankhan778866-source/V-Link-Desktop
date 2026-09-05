@@ -14,40 +14,32 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Java JDK
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
 
-      - name: Install Inno Setup and NSIS Compilers
+      - name: Install Inno Setup and NSIS
         shell: pwsh
         run: |
+          Write-Host "Installing Inno Setup and NSIS..."
           choco install innosetup --yes --no-progress
           choco install nsis --yes --no-progress
-          if (Test-Path "C:\Program Files (x86)\Inno Setup 6\ISCC.exe") {
-            echo "C:\Program Files (x86)\Inno Setup 6" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          } elseif (Test-Path "C:\Program Files\Inno Setup 6\ISCC.exe") {
-            echo "C:\Program Files\Inno Setup 6" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          }
-          if (Test-Path "C:\Program Files (x86)\NSIS") {
-            echo "C:\Program Files (x86)\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          } elseif (Test-Path "C:\Program Files\NSIS") {
-            echo "C:\Program Files\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          
+          # Add to GITHUB_PATH
+          @("C:\Program Files (x86)\Inno Setup 6", "C:\Program Files\Inno Setup 6", "C:\Program Files (x86)\NSIS", "C:\Program Files\NSIS") | ForEach-Object {
+            if (Test-Path $_) {
+              Write-Host "Adding to PATH: $_"
+              $_ | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+            }
           }
 
-      - name: Prepare Windows Desktop Distribution Files
+      - name: Prepare Staging and Distribution Directories
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path "dist\V-Link"
-          New-Item -ItemType Directory -Force -Path "windows\Output"
+          New-Item -ItemType Directory -Force -Path "dist\V-Link" | Out-Null
+          New-Item -ItemType Directory -Force -Path "windows\Output" | Out-Null
           
-          # Create Desktop metadata and configuration
           @"
           V-Link Desktop Client for Windows
           Version: 1.0.0
@@ -57,55 +49,50 @@ jobs:
           Build Timestamp: $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")
           "@ | Out-File -FilePath "dist\V-Link\app_info.txt" -Encoding utf8
           
-          # Copy desktop resources and assets into distribution bundle
           if (Test-Path "app\src\main\res") {
             Copy-Item -Path "app\src\main\res" -Destination "dist\V-Link\res" -Recurse -Force
           }
           
-          # Copy version metadata
           Copy-Item -Path "windows\version.json" -Destination "dist\V-Link\version.json" -Force
 
-      - name: Compile Native V-Link.exe Binary
+      - name: Compile Native V-Link.exe Executable
         shell: pwsh
         run: |
           Write-Host "=== Compiling native V-Link.exe ==="
+          $outExe = "dist\V-Link\V-Link.exe"
           
-          # 1. First try Roslyn CSC directly
-          $cscPath = Get-ChildItem -Path "C:\Windows\Microsoft.NET\Framework64\v4.0.*", "C:\Program Files\Microsoft Visual Studio\*" -Filter "csc.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
-          
-          $compiled = $false
-          if ($cscPath -and (Test-Path $cscPath)) {
-            Write-Host "Using CSC at: $cscPath"
-            & $cscPath /target:winexe /out:"dist\V-Link\V-Link.exe" /reference:System.Windows.Forms.dll /reference:System.Drawing.dll "windows\VLinkLauncher.cs"
-            if (Test-Path "dist\V-Link\V-Link.exe") {
-              $compiled = $true
-              Write-Host "CSC build succeeded!"
-            }
-          }
-          
-          # 2. Fallback to dotnet publish
-          if (-not $compiled) {
-            Write-Host "Using dotnet publish..."
+          # Method 1: dotnet publish (Standard & Robust)
+          try {
+            Write-Host "Compiling via dotnet publish..."
             dotnet publish windows\VLinkLauncher.csproj -c Release -r win-x64 --self-contained false -o "dist\V-Link"
-            if (Test-Path "dist\V-Link\V-Link.exe") {
-              $compiled = $true
-              Write-Host "dotnet publish succeeded!"
+          } catch {
+            Write-Host "dotnet publish note: $($_.Exception.Message)"
+          }
+          
+          # Method 2: Roslyn CSC compiler fallback
+          if (-not (Test-Path $outExe)) {
+            Write-Host "Falling back to CSC compiler..."
+            $csc = Get-ChildItem -Path "C:\Windows\Microsoft.NET\Framework64\v4.0.*", "C:\Program Files\Microsoft Visual Studio\*" -Filter "csc.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+            if ($csc -and (Test-Path $csc)) {
+              & $csc /target:winexe /out:$outExe /reference:System.Windows.Forms.dll /reference:System.Drawing.dll "windows\VLinkLauncher.cs"
             }
           }
           
-          # 3. Fallback to Add-Type in PowerShell
-          if (-not (Test-Path "dist\V-Link\V-Link.exe")) {
-            Write-Host "Using Add-Type compilation..."
-            Add-Type -TypeDefinition (Get-Content "windows\VLinkLauncher.cs" -Raw) -OutputAssembly "dist\V-Link\V-Link.exe" -OutputType WindowsGUI -ReferencedAssemblies "System.Windows.Forms","System.Drawing"
+          # Method 3: PowerShell Add-Type fallback
+          if (-not (Test-Path $outExe)) {
+            Write-Host "Falling back to Add-Type compilation..."
+            Add-Type -TypeDefinition (Get-Content "windows\VLinkLauncher.cs" -Raw) -OutputAssembly $outExe -OutputType WindowsGUI -ReferencedAssemblies "System.Windows.Forms","System.Drawing"
           }
           
-          # Copy to root dist
-          Copy-Item -Path "dist\V-Link\V-Link.exe" -Destination "dist\V-Link.exe" -Force -ErrorAction SilentlyContinue
+          if (-not (Test-Path $outExe)) {
+            throw "Failed to compile V-Link.exe binary!"
+          }
           
-          Write-Host "Binary verification:"
-          Get-ChildItem -Path "dist\V-Link"
+          Copy-Item -Path $outExe -Destination "dist\V-Link.exe" -Force
+          Write-Host "V-Link.exe successfully created:"
+          Get-Item $outExe | Format-List Length, FullName
 
-      - name: Compile Inno Setup Script into Installer Executable
+      - name: Build Inno Setup Installer
         shell: pwsh
         run: |
           $iscc = Get-Command ISCC.exe -ErrorAction SilentlyContinue
@@ -115,38 +102,48 @@ jobs:
             } elseif (Test-Path "C:\Program Files\Inno Setup 6\ISCC.exe") {
               $isccPath = "C:\Program Files\Inno Setup 6\ISCC.exe"
             } else {
-              throw "ISCC.exe compiler not found in system paths."
+              throw "Inno Setup Compiler (ISCC.exe) not found."
             }
           } else {
             $isccPath = $iscc.Source
           }
           
-          Write-Host "Compiling Windows Installer with: $isccPath"
+          Write-Host "Compiling Inno Setup with: $isccPath"
           & $isccPath windows\vlink_setup.iss
 
-      - name: Compile NSIS Installer Executable
+      - name: Build NSIS Installer
         shell: pwsh
         run: |
           $makensis = Get-Command makensis.exe -ErrorAction SilentlyContinue
           if ($null -ne $makensis) {
-            & $makensis.Source windows\vlink_installer.nsi
+            $nsisPath = $makensis.Source
           } elseif (Test-Path "C:\Program Files (x86)\NSIS\makensis.exe") {
-            & "C:\Program Files (x86)\NSIS\makensis.exe" windows\vlink_installer.nsi
+            $nsisPath = "C:\Program Files (x86)\NSIS\makensis.exe"
           } elseif (Test-Path "C:\Program Files\NSIS\makensis.exe") {
-            & "C:\Program Files\NSIS\makensis.exe" windows\vlink_installer.nsi
+            $nsisPath = "C:\Program Files\NSIS\makensis.exe"
+          } else {
+            $nsisPath = $null
+          }
+          
+          if ($nsisPath) {
+            Write-Host "Compiling NSIS with: $nsisPath"
+            & $nsisPath windows\vlink_installer.nsi
+          } else {
+            Write-Host "makensis not found, skipping NSIS build (Inno Setup is primary)."
           }
 
-      - name: Verify Installer Executable Exists
+      - name: Verify Installer Artifacts
         shell: pwsh
         run: |
           Get-ChildItem -Path "windows\Output" -Recurse
           if (-not (Test-Path "windows\Output\V-Link-Setup-1.0.0.exe")) {
-            throw "Installer executable windows/Output/V-Link-Setup-1.0.0.exe was not generated!"
+            throw "Installer windows/Output/V-Link-Setup-1.0.0.exe was not created!"
           }
+          Write-Host "Installer created successfully!"
 
-      - name: Publish Windows Setup (.exe)
+      - name: Upload Windows Installer (.exe)
         uses: actions/upload-artifact@v4
         with:
           name: V-Link-Windows-Installer-v1.0.0
-          path: windows/Output/*.exe
+          path: windows/Output/V-Link-Setup-1.0.0.exe
           if-no-files-found: error

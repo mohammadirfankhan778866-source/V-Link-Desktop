@@ -4,7 +4,6 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
-    <ApplicationIcon>..\app\src\main\res\drawable\pulse_chat_icon.png</ApplicationIcon>
     <AssemblyName>V-Link</AssemblyName>
     <RootNamespace>VLinkDesktop</RootNamespace>
     <PublishSingleFile>true</PublishSingleFile>
