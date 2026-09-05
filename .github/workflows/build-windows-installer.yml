@@ -54,31 +54,32 @@ jobs:
           }
           
           Copy-Item -Path "windows\version.json" -Destination "dist\V-Link\version.json" -Force
+          Copy-Item -Path "windows\app.ico" -Destination "dist\V-Link\app.ico" -Force
 
-      - name: Compile Native V-Link.exe Executable
+      - name: Compile Native Zero-Dependency V-Link.exe Executable
         shell: pwsh
         run: |
-          Write-Host "=== Compiling native V-Link.exe ==="
+          Write-Host "=== Compiling native V-Link.exe with embedded App Icon and Zero External Runtime Dependencies ==="
           $outExe = "dist\V-Link\V-Link.exe"
           
-          # Method 1: dotnet publish (Standard & Robust)
-          try {
-            Write-Host "Compiling via dotnet publish..."
-            dotnet publish windows\VLinkLauncher.csproj -c Release -r win-x64 --self-contained false -o "dist\V-Link"
-          } catch {
-            Write-Host "dotnet publish note: $($_.Exception.Message)"
-          }
-          
-          # Method 2: Roslyn CSC compiler fallback
-          if (-not (Test-Path $outExe)) {
-            Write-Host "Falling back to CSC compiler..."
-            $csc = Get-ChildItem -Path "C:\Windows\Microsoft.NET\Framework64\v4.0.*", "C:\Program Files\Microsoft Visual Studio\*" -Filter "csc.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
-            if ($csc -and (Test-Path $csc)) {
-              & $csc /target:winexe /out:$outExe /reference:System.Windows.Forms.dll /reference:System.Drawing.dll "windows\VLinkLauncher.cs"
+          # Priority 1: Windows Built-In .NET Framework compiler (C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe)
+          # Pre-installed on 100% of Windows 10 & 11 PCs - never prompts the user for any .NET runtime!
+          $csc = Get-ChildItem -Path "C:\Windows\Microsoft.NET\Framework64\v4.0.*", "C:\Program Files\Microsoft Visual Studio\*" -Filter "csc.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+          if ($csc -and (Test-Path $csc)) {
+            Write-Host "Compiling native zero-dependency V-Link.exe using in-box Windows compiler: $csc"
+            & $csc /target:winexe /win32icon:windows\app.ico /out:$outExe /reference:System.Windows.Forms.dll /reference:System.Drawing.dll "windows\VLinkLauncher.cs"
+            if (Test-Path $outExe) {
+              Write-Host "Native in-box V-Link.exe successfully compiled!"
             }
           }
           
-          # Method 3: PowerShell Add-Type fallback
+          # Priority 2: dotnet publish with --self-contained true (Bundles everything, zero runtime prompt!)
+          if (-not (Test-Path $outExe)) {
+            Write-Host "Compiling via dotnet publish with self-contained bundle..."
+            dotnet publish windows\VLinkLauncher.csproj -c Release -r win-x64 --self-contained true -o "dist\V-Link"
+          }
+          
+          # Priority 3: PowerShell Add-Type fallback
           if (-not (Test-Path $outExe)) {
             Write-Host "Falling back to Add-Type compilation..."
             Add-Type -TypeDefinition (Get-Content "windows\VLinkLauncher.cs" -Raw) -OutputAssembly $outExe -OutputType WindowsGUI -ReferencedAssemblies "System.Windows.Forms","System.Drawing"
@@ -139,7 +140,7 @@ jobs:
           if (-not (Test-Path "windows\Output\V-Link-Setup-1.0.0.exe")) {
             throw "Installer windows/Output/V-Link-Setup-1.0.0.exe was not created!"
           }
-          Write-Host "Installer created successfully!"
+          Write-Host "Installer created successfully with embedded desktop and shortcut logos!"
 
       - name: Upload Windows Installer (.exe)
         uses: actions/upload-artifact@v4

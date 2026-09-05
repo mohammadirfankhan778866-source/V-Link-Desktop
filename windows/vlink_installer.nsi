@@ -28,6 +28,8 @@ SetCompressor /SOLID lzma
 
 ; UI Configuration
 !define MUI_ABORTWARNING
+!define MUI_ICON "..\windows\app.ico"
+!define MUI_UNICON "..\windows\app.ico"
 
 ; Pages
 !insertmacro MUI_PAGE_WELCOME
@@ -54,14 +56,15 @@ Section "MainSection" SEC01
   ; Write distribution files and version manifest
   File /r "..\dist\V-Link\*.*"
   File /nonfatal "..\windows\version.json"
+  File "..\windows\app.ico"
 
   ; Create Start Menu Shortcuts
   CreateDirectory "$SMPROGRAMS\V-Link"
-  CreateShortCut "$SMPROGRAMS\V-Link\V-Link.lnk" "$INSTDIR\V-Link.exe"
+  CreateShortCut "$SMPROGRAMS\V-Link\V-Link.lnk" "$INSTDIR\V-Link.exe" "" "$INSTDIR\app.ico"
   CreateShortCut "$SMPROGRAMS\V-Link\Uninstall.lnk" "$INSTDIR\uninst.exe"
 
   ; Create Desktop Shortcut
-  CreateShortCut "$DESKTOP\V-Link.lnk" "$INSTDIR\V-Link.exe"
+  CreateShortCut "$DESKTOP\V-Link.lnk" "$INSTDIR\V-Link.exe" "" "$INSTDIR\app.ico"
 SectionEnd
 
 Section -Post
@@ -73,7 +76,7 @@ Section -Post
   WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayName" "$(^Name)"
   WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "UninstallString" '"$INSTDIR\uninst.exe"'
   WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "QuietUninstallString" '"$INSTDIR\uninst.exe" /S'
-  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayIcon" "$INSTDIR\V-Link.exe"
+  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayIcon" "$INSTDIR\app.ico"
   WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayVersion" "${PRODUCT_VERSION}"
   WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "URLInfoAbout" "${PRODUCT_WEB_SITE}"
   WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "Publisher" "${PRODUCT_PUBLISHER}"

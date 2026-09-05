@@ -7,8 +7,9 @@
     <AssemblyName>V-Link</AssemblyName>
     <RootNamespace>VLinkDesktop</RootNamespace>
     <PublishSingleFile>true</PublishSingleFile>
-    <SelfContained>false</SelfContained>
+    <SelfContained>true</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <ApplicationIcon>app.ico</ApplicationIcon>
   </PropertyGroup>
 
 </Project>

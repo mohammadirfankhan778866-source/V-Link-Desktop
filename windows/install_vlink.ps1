@@ -180,13 +180,18 @@ start "" "https://v-link.chat"
     }
 }
 
-# Copy version.json for local comparison
+# Copy version.json and app.ico for local comparison and shortcut icon
 $versionSrc = Join-Path $ScriptDir "version.json"
 if (Test-Path $versionSrc) {
     Copy-Item -Path $versionSrc -Destination (Join-Path $InstallDir "version.json") -Force
 }
+$icoSrc = Join-Path $ScriptDir "app.ico"
+$targetIco = Join-Path $InstallDir "app.ico"
+if (Test-Path $icoSrc) {
+    Copy-Item -Path $icoSrc -Destination $targetIco -Force
+}
 
-# Step 3: Create Desktop Shortcut
+# Step 3: Create Desktop Shortcut with custom V-Link logo
 $wshShell = New-Object -ComObject WScript.Shell
 $desktopPath = [Environment]::GetFolderPath("Desktop")
 $desktopShortcutPath = Join-Path $desktopPath "$AppName.lnk"
@@ -195,10 +200,13 @@ $shortcut = $wshShell.CreateShortcut($desktopShortcutPath)
 $shortcut.TargetPath = $targetExe
 $shortcut.WorkingDirectory = $InstallDir
 $shortcut.Description = "V-Link Secure Desktop Messenger"
+if (Test-Path $targetIco) {
+    $shortcut.IconLocation = "$targetIco,0"
+}
 $shortcut.Save()
-Write-Log "Desktop shortcut created at: $desktopShortcutPath" "SUCCESS"
+Write-Log "Desktop shortcut created with V-Link icon at: $desktopShortcutPath" "SUCCESS"
 
-# Step 4: Create Start Menu Programs Shortcut
+# Step 4: Create Start Menu Programs Shortcut with custom V-Link logo
 $startMenuPrograms = [Environment]::GetFolderPath("Programs")
 $vlinkStartMenuDir = Join-Path $startMenuPrograms "$AppName"
 if (-not (Test-Path $vlinkStartMenuDir)) {
@@ -210,8 +218,11 @@ $startShortcut = $wshShell.CreateShortcut($startMenuShortcutPath)
 $startShortcut.TargetPath = $targetExe
 $startShortcut.WorkingDirectory = $InstallDir
 $startShortcut.Description = "V-Link Secure Desktop Messenger"
+if (Test-Path $targetIco) {
+    $startShortcut.IconLocation = "$targetIco,0"
+}
 $startShortcut.Save()
-Write-Log "Start Menu shortcut created at: $startMenuShortcutPath" "SUCCESS"
+Write-Log "Start Menu shortcut created with V-Link icon at: $startMenuShortcutPath" "SUCCESS"
 
 # Step 5: Write Registry Keys
 try {

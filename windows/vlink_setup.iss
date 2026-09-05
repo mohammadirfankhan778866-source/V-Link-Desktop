@@ -19,6 +19,8 @@ AppUpdatesURL={#MyAppURL}
 DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
+SetupIconFile=..\windows\app.ico
+UninstallDisplayIcon={app}\{#MyAppExeName}
 OutputDir=.\Output
 OutputBaseFilename=V-Link-Setup-{#MyAppVersion}
 Compression=lzma2/ultra64
@@ -55,12 +57,14 @@ Name: "quicklaunchicon"; Description: "Create a Quick Launch shortcut"; GroupDes
 Source: "..\dist\V-Link\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; Fallback standalone executable if present
 Source: "..\dist\V-Link.exe"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
+; Explicit application icon file for shortcuts
+Source: "..\windows\app.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
-Name: "{group}\V-Link (Safe Mode)"; Filename: "{app}\{#MyAppExeName}"; Parameters: "--safe-mode"
+Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\app.ico"
+Name: "{group}\V-Link (Safe Mode)"; Filename: "{app}\{#MyAppExeName}"; Parameters: "--safe-mode"; IconFilename: "{app}\app.ico"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\app.ico"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "Launch V-Link Desktop Messenger"; Flags: nowait postinstall skipifsilent skipifnotsilent

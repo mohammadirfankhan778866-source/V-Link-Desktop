@@ -33,8 +33,9 @@ if not exist "%~dp0..\dist\V-Link" mkdir "%~dp0..\dist\V-Link"
 if not exist "%~dp0Output" mkdir "%~dp0Output"
 
 copy /Y "%~dp0version.json" "%~dp0..\dist\V-Link\version.json" >nul
+copy /Y "%~dp0app.ico" "%~dp0..\dist\V-Link\app.ico" >nul
 
-REM Compile VLinkLauncher.cs to V-Link.exe using csc if available
+REM Compile VLinkLauncher.cs to V-Link.exe using built-in Windows csc.exe
 for /f "tokens=*" %%F in ('dir /s /b "%windir%\Microsoft.NET\Framework64\csc.exe" 2^>nul') do (
     set CSC_PATH="%%F"
     goto :found_csc
@@ -42,11 +43,11 @@ for /f "tokens=*" %%F in ('dir /s /b "%windir%\Microsoft.NET\Framework64\csc.exe
 :found_csc
 
 if defined CSC_PATH (
-    echo Compiling V-Link.exe with C# compiler: %CSC_PATH%
-    %CSC_PATH% /target:winexe /out:"%~dp0..\dist\V-Link\V-Link.exe" /reference:System.Windows.Forms.dll /reference:System.Drawing.dll "%~dp0VLinkLauncher.cs"
+    echo Compiling native zero-dependency V-Link.exe with: %CSC_PATH%
+    %CSC_PATH% /target:winexe /win32icon:"%~dp0app.ico" /out:"%~dp0..\dist\V-Link\V-Link.exe" /reference:System.Windows.Forms.dll /reference:System.Drawing.dll "%~dp0VLinkLauncher.cs"
 ) else (
-    echo Compiling V-Link.exe with dotnet...
-    dotnet publish "%~dp0VLinkLauncher.csproj" -c Release -r win-x64 --self-contained false -o "%~dp0..\dist\V-Link"
+    echo Compiling self-contained V-Link.exe with dotnet...
+    dotnet publish "%~dp0VLinkLauncher.csproj" -c Release -r win-x64 --self-contained true -o "%~dp0..\dist\V-Link"
 )
 
 copy /Y "%~dp0..\dist\V-Link\V-Link.exe" "%~dp0..\dist\V-Link.exe" >nul 2>&1

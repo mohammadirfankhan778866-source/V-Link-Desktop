@@ -44,11 +44,26 @@ namespace VLinkDesktop
                 Application.Exit();
             });
 
+            // Load custom application icon
+            Icon appIcon = null;
+            try {
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                string icoPath = Path.Combine(baseDir, "app.ico");
+                if (File.Exists(icoPath)) {
+                    appIcon = new Icon(icoPath);
+                } else {
+                    appIcon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
+                }
+            } catch {}
+
+            if (appIcon == null) appIcon = SystemIcons.Application;
+            Icon = appIcon;
+
             // Initialize System Tray Icon
             trayIcon = new NotifyIcon()
             {
                 Text = "V-Link Desktop Messenger",
-                Icon = SystemIcons.Application,
+                Icon = appIcon,
                 ContextMenuStrip = trayMenu,
                 Visible = true
             };

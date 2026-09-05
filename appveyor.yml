@@ -43,25 +43,29 @@ build_script:
       }
       
       Copy-Item -Path "windows\version.json" -Destination "dist\V-Link\version.json" -Force
+      Copy-Item -Path "windows\app.ico" -Destination "dist\V-Link\app.ico" -Force
 
-      Write-Host "=== Step 2/5: Building Native V-Link.exe Executable ==="
+      Write-Host "=== Step 2/5: Building Native Zero-Dependency V-Link.exe Executable ==="
       $outExe = "dist\V-Link\V-Link.exe"
       
-      try {
-        Write-Host "Compiling via dotnet publish..."
-        dotnet publish windows\VLinkLauncher.csproj -c Release -r win-x64 --self-contained false -o "dist\V-Link"
-      } catch {
-        Write-Host "dotnet publish note: $($_.Exception.Message)"
+      # Priority 1: Windows Built-In In-Box C# compiler (targets pre-installed .NET 4.8 runtime, zero user prompt)
+      $cscPath = Get-ChildItem -Path "C:\Windows\Microsoft.NET\Framework64\v4.0.*", "C:\Program Files\Microsoft Visual Studio\*" -Filter "csc.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+      if ($cscPath -and (Test-Path $cscPath)) {
+        Write-Host "Compiling native V-Link.exe with embedded icon via in-box csc: $cscPath"
+        & $cscPath /target:winexe /win32icon:windows\app.ico /out:$outExe /reference:System.Windows.Forms.dll /reference:System.Drawing.dll "windows\VLinkLauncher.cs"
       }
       
+      # Priority 2: dotnet publish with self-contained bundle
       if (-not (Test-Path $outExe)) {
-        $cscPath = Get-ChildItem -Path "C:\Windows\Microsoft.NET\Framework64\v4.0.*", "C:\Program Files\Microsoft Visual Studio\*" -Filter "csc.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
-        if ($cscPath -and (Test-Path $cscPath)) {
-          Write-Host "Compiling native V-Link.exe using Roslyn csc: $cscPath"
-          & $cscPath /target:winexe /out:$outExe /reference:System.Windows.Forms.dll /reference:System.Drawing.dll "windows\VLinkLauncher.cs"
+        try {
+          Write-Host "Compiling via dotnet publish self-contained..."
+          dotnet publish windows\VLinkLauncher.csproj -c Release -r win-x64 --self-contained true -o "dist\V-Link"
+        } catch {
+          Write-Host "dotnet publish note: $($_.Exception.Message)"
         }
       }
       
+      # Priority 3: Add-Type
       if (-not (Test-Path $outExe)) {
         Write-Host "Generating compiled launcher via Add-Type..."
         Add-Type -TypeDefinition (Get-Content "windows\VLinkLauncher.cs" -Raw) -OutputAssembly $outExe -OutputType WindowsGUI -ReferencedAssemblies "System.Windows.Forms","System.Drawing"
